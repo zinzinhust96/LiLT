@@ -36,6 +36,8 @@ class XFUN(datasets.GeneratorBasedBuilder):
 
     tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
 
+    # NOTE: the processing script (xfun.py) will be loaded by datasets.load_dataset()
+    # https://huggingface.co/docs/datasets/v1.2.1/package_reference/loading_methods.html#datasets.load_dataset
     def _info(self):
         return datasets.DatasetInfo(
             features=datasets.Features(
@@ -53,7 +55,7 @@ class XFUN(datasets.GeneratorBasedBuilder):
                         {
                             "start": datasets.Value("int64"),
                             "end": datasets.Value("int64"),
-                            "label": datasets.ClassLabel(names=["HEADER", "QUESTION", "ANSWER"]),
+                            "label": datasets.ClassLabel(names=["OTHER", "QUESTION", "ANSWER"]),
                         }
                     ),
                     "relations": datasets.Sequence(
@@ -80,9 +82,10 @@ class XFUN(datasets.GeneratorBasedBuilder):
         # train_files_for_many_langs = [downloaded_files["train"]]
         # val_files_for_many_langs = [downloaded_files["val"]]
         # # test_files_for_many_langs = [downloaded_files["test"]]
-        file_dir = 'xfund&funsd/'
-        train_files_for_many_langs = [[file_dir+f"{self.config.lang}.train.json", file_dir+f"{self.config.lang}"]]
-        val_files_for_many_langs = [[file_dir+f"{self.config.lang}.val.json", file_dir+f"{self.config.lang}"]]
+        
+        file_dir = '/workspace/vinbrain/thoaibx/EHR/LiLT/dataset/'
+        train_files_for_many_langs = [[file_dir+"pubtable1m_entity_linking_v1_train.json", file_dir+"images_table"]]
+        val_files_for_many_langs = [[file_dir+"pubtable1m_entity_linking_v1_val.json", file_dir+"images_table"]]
         print('>>> files for many lang: ', train_files_for_many_langs, val_files_for_many_langs)
 
         if self.config.additional_langs:
@@ -114,8 +117,8 @@ class XFUN(datasets.GeneratorBasedBuilder):
                 data = json.load(f)
 
             for doc in data["documents"]:
-                doc["img"]["fpath"] = os.path.join(filepath[1], doc["img"]["fname"])
-                image, size = load_image(doc["img"]["fpath"])
+                doc["fpath"] = os.path.join(filepath[1], doc["id"] + '.jpg')
+                image, size = load_image(doc["fpath"])
                 document = doc["document"]
                 tokenized_doc = {"input_ids": [], "bbox": [], "labels": []}
                 entities = []
@@ -154,7 +157,7 @@ class XFUN(datasets.GeneratorBasedBuilder):
                         text_length += offset[1] - offset[0]
                         tmp_box = []
                         while ocr_length < text_length:
-                            ocr_word = line["words"].pop(0)
+                            ocr_word = line["word"].pop(0)
                             ocr_length += len(
                                 self.tokenizer._tokenizer.normalizer.normalize_str(ocr_word["text"].strip())
                             )
@@ -167,11 +170,12 @@ class XFUN(datasets.GeneratorBasedBuilder):
                         [bbox[i + 1][0], bbox[i + 1][1], bbox[i + 1][0], bbox[i + 1][1]] if b is None else b
                         for i, b in enumerate(bbox)
                     ]
-                    if line["label"] == "other":
-                        label = ["O"] * len(bbox)
-                    else:
-                        label = [f"I-{line['label'].upper()}"] * len(bbox)
-                        label[0] = f"B-{line['label'].upper()}"
+                    if len(bbox):
+                        if line["label"] == "other":
+                            label = ["O"] * len(bbox)
+                        else:
+                            label = [f"I-{line['label'].upper()}"] * len(bbox)
+                            label[0] = f"B-{line['label'].upper()}"
                     # NOTE: bbox = [[41, 32, 41, 32], [41, 32, 213, 49], [41, 32, 213, 49], [41, 32, 213, 49], [41, 32, 213, 49]] for a line with 4 chars, [41, 32, 213, 49] is line box
                     tokenized_inputs.update({"bbox": bbox, "labels": label})
                     if label[0] != "O":
@@ -259,3 +263,4 @@ class XFUN(datasets.GeneratorBasedBuilder):
                         }
                     )
                     yield f"{doc['id']}_{chunk_id}", item
+                    
