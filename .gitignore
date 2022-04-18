@@ -270,3 +270,8 @@ Thumbs.db
 
 LiLTfinetune/data/datasets/*.lock
 # End of https://www.toptal.com/developers/gitignore/api/python,macos,pycharm+all
+
+data
+tokenizer
+xfund&funsd*
+xlm_roberta_base 

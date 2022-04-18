@@ -83,6 +83,7 @@ class XFUN(datasets.GeneratorBasedBuilder):
         file_dir = 'xfund&funsd/'
         train_files_for_many_langs = [[file_dir+f"{self.config.lang}.train.json", file_dir+f"{self.config.lang}"]]
         val_files_for_many_langs = [[file_dir+f"{self.config.lang}.val.json", file_dir+f"{self.config.lang}"]]
+        print('>>> files for many lang: ', train_files_for_many_langs, val_files_for_many_langs)
 
         if self.config.additional_langs:
             additional_langs = self.config.additional_langs.split("+")
@@ -171,6 +172,7 @@ class XFUN(datasets.GeneratorBasedBuilder):
                     else:
                         label = [f"I-{line['label'].upper()}"] * len(bbox)
                         label[0] = f"B-{line['label'].upper()}"
+                    # NOTE: bbox = [[41, 32, 41, 32], [41, 32, 213, 49], [41, 32, 213, 49], [41, 32, 213, 49], [41, 32, 213, 49]] for a line with 4 chars, [41, 32, 213, 49] is line box
                     tokenized_inputs.update({"bbox": bbox, "labels": label})
                     if label[0] != "O":
                         entity_id_to_index_map[line["id"]] = len(entities)
